@@ -13,31 +13,41 @@ type Config struct {
 	CurrUser string `json:"current_user_name"`
 }
 
-func Read() Config {
+func Read() (Config, error) {
 	res := Config{}
 	fp, err := getConfigFilepath()
 	if err != nil {
-		return res
+		return res, err
 	}
-	byteData, _ := os.ReadFile(fp)
-	err = json.Unmarshal(byteData, &res)
+	file, err := os.Open(fp)
 	if err != nil {
-		fmt.Println("filepath:", fp)
-		fmt.Println(res)
-		return res
+		return res, err
 	}
-	return res
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&res)
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
 }
 
 func (c *Config) SetUser(user string) error {
 	c.CurrUser = user
-	b, err := json.Marshal(c)
+	fp, err := getConfigFilepath()
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
-	fp, _ := getConfigFilepath()
-	err = os.WriteFile(fp, b, 0666)
+
+	file, err := os.Create(fp)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(c)
 	if err != nil {
 		return err
 	}
