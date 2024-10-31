@@ -26,8 +26,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("error opening connection to DB: %v", err)
 	}
-
+	defer db.Close()
 	dbQueries := database.New(db)
+
+	progState := &state{
+		cfg: &c,
+		db:  dbQueries,
+	}
 
 	cmds := commands{
 		handlers: make(map[string]func(*state, command) error),
@@ -42,18 +47,8 @@ func main() {
 	cmdName := inputArgs[1]
 	cmdArgs := inputArgs[2:]
 
-	progState := &state{
-		cfg: &c,
-		db:  dbQueries,
-	}
-
 	err = cmds.run(progState, command{Name: cmdName, Args: cmdArgs})
 	if err != nil {
 		log.Fatal(err)
 	}
-	c, err = config.Read()
-	if err != nil {
-		log.Fatalf("error reading config: %v", err)
-	}
-	fmt.Println(c)
 }
