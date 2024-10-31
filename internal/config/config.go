@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 )
 
@@ -57,8 +56,6 @@ func (c *Config) SetUser(user string) error {
 func getConfigFilepath() (string, error) {
 	dir, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println("dir:", dir)
-		fmt.Println("Error getting user dir")
 		return "", err
 	}
 	filepath := dir + "/" + config_filename
