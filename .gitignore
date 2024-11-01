@@ -4,5 +4,9 @@
 !*.*
 # Unignore directories
 !*/
+# Unignore makefile
+!Makefile
 # Ignore bin dir
-bin/
+bin/*
+# ignore .git dir
+.git/*

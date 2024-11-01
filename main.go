@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
+	//	"fmt"
 	"log"
 	"os"
 
@@ -39,6 +39,7 @@ func main() {
 	}
 	cmds.register("login", handleLogin)
 	cmds.register("register", handleRegister)
+	cmds.register("reset", handleReset)
 
 	inputArgs := os.Args
 	if len(inputArgs) < 2 {

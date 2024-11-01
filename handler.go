@@ -52,6 +52,15 @@ func handleRegister(s *state, cmd command) error {
 	return nil
 }
 
+func handleReset(s *state, cmd command) error {
+	err := s.db.DeleteUsers(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Users deleted from db\n")
+	return nil
+}
+
 func printUser(user database.User) {
 	fmt.Printf(" * ID:		%v\n", user.ID)
 	fmt.Printf(" * Name:	%v\n", user.Name)
