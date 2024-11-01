@@ -9,6 +9,16 @@ import (
 	"github.com/jamesonhm/gator/internal/database"
 )
 
+func handleAgg(s *state, cmd command) error {
+	url := "https://www.wagslane.dev/index.xml"
+	feed, err := fetchFeed(context.Background(), url)
+	if err != nil {
+		return err
+	}
+	fmt.Println(feed)
+	return nil
+}
+
 func handleLogin(s *state, cmd command) error {
 	if len(cmd.Args) == 0 {
 		return fmt.Errorf("usage: %s <name>", cmd.Name)
