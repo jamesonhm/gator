@@ -9,6 +9,35 @@ import (
 	"github.com/jamesonhm/gator/internal/database"
 )
 
+func handleAddFeed(s *state, cmd command) error {
+	if len(cmd.Args) != 2 {
+		return fmt.Errorf("usage: addfeed <feed-name> <url>")
+	}
+
+	ctx := context.Background()
+	user, err := s.db.GetUser(ctx, s.cfg.CurrUser)
+	if err != nil {
+		return fmt.Errorf("error getting user from db: %v", err)
+	}
+
+	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		Name:      cmd.Args[0],
+		Url:       cmd.Args[1],
+		UserID:    user.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("error adding feed to database: %v", err)
+	}
+
+	fmt.Println(" * Name:", feed.Name)
+	fmt.Println(" * Url:", feed.Url)
+	fmt.Println(" * User:", feed.UserID)
+	fmt.Println(" * CreatedAt:", feed.CreatedAt)
+	return nil
+}
+
 func handleAgg(s *state, cmd command) error {
 	url := "https://www.wagslane.dev/index.xml"
 	feed, err := fetchFeed(context.Background(), url)
