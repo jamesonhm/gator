@@ -100,6 +100,22 @@ func handleReset(s *state, cmd command) error {
 	return nil
 }
 
+func handleFeeds(s *state, cmd command) error {
+	feeds, err := s.db.GetFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("error listing feeds: %v", err)
+	}
+
+	for i, f := range feeds {
+		user, err := s.db.GetUserByID(context.Background(), f.UserID)
+		if err != nil {
+			return fmt.Errorf("error getting user: %s for feed: %s. Error: %v", f.UserID, f.Name, err)
+		}
+		fmt.Printf("%d - Feed: %s, URL: %s, User: %s\n", i+1, f.Name, f.Url, user.Name)
+	}
+	return nil
+}
+
 func handleUsers(s *state, cmd command) error {
 	users, err := s.db.GetUsers(context.Background())
 	if err != nil {

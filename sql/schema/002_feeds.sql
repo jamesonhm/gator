@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE feeds (
-    id INTEGER PRIMARY KEY,
+    id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
     name TEXT NOT NULL,
