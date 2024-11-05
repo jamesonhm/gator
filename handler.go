@@ -21,6 +21,7 @@ func handleAddFeed(s *state, cmd command) error {
 	}
 
 	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
+		ID:        uuid.New(),
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 		Name:      cmd.Args[0],
@@ -29,6 +30,17 @@ func handleAddFeed(s *state, cmd command) error {
 	})
 	if err != nil {
 		return fmt.Errorf("error adding feed to database: %v", err)
+	}
+
+	_, err = s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("error creating new follow: %v", err)
 	}
 
 	fmt.Println(" * Name:", feed.Name)
@@ -45,6 +57,57 @@ func handleAgg(s *state, cmd command) error {
 		return err
 	}
 	fmt.Println(feed)
+	return nil
+}
+
+func handleFollow(s *state, cmd command) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("usage: %s <url>", cmd.Name)
+	}
+	url := cmd.Args[0]
+
+	u, err := s.db.GetUser(context.Background(), s.cfg.CurrUser)
+	if err != nil {
+		return fmt.Errorf("error getting user: %v", err)
+	}
+
+	f, err := s.db.GetFeedByUrl(context.Background(), url)
+	if err != nil {
+		return fmt.Errorf("error getting feed by url: %v", err)
+	}
+
+	ff, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID:    u.ID,
+		FeedID:    f.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("error getting feed follow: %v", err)
+	}
+	fmt.Println(ff.UserName, "is now following", ff.FeedName)
+	return nil
+}
+
+func handleFollowing(s *state, cmd command) error {
+	u, err := s.db.GetUser(context.Background(), s.cfg.CurrUser)
+	if err != nil {
+		return fmt.Errorf("error getting user: %v", err)
+	}
+
+	follows, err := s.db.GetFeedFollowsForUser(context.Background(), u.ID)
+	if err != nil {
+		return fmt.Errorf("error getting feed follows for user: %v", err)
+	}
+
+	if len(follows) == 0 {
+		fmt.Println("you are not following any feeds")
+		return nil
+	}
+	for _, follow := range follows {
+		fmt.Println("* ", follow.FeedName)
+	}
 	return nil
 }
 
@@ -104,6 +167,11 @@ func handleFeeds(s *state, cmd command) error {
 	feeds, err := s.db.GetFeeds(context.Background())
 	if err != nil {
 		return fmt.Errorf("error listing feeds: %v", err)
+	}
+
+	if len(feeds) == 0 {
+		fmt.Println("No feeds found")
+		return nil
 	}
 
 	for i, f := range feeds {
