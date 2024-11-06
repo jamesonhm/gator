@@ -1,8 +1,9 @@
 package main
 
 import (
+	"context"
 	"database/sql"
-	//	"fmt"
+	"fmt"
 	"log"
 	"os"
 
@@ -42,10 +43,11 @@ func main() {
 	cmds.register("reset", handleReset)
 	cmds.register("users", handleUsers)
 	cmds.register("agg", handleAgg)
-	cmds.register("addfeed", handleAddFeed)
+	cmds.register("addfeed", middlewareLoggedIn(handleAddFeed))
 	cmds.register("feeds", handleFeeds)
-	cmds.register("follow", handleFollow)
-	cmds.register("following", handleFollowing)
+	cmds.register("follow", middlewareLoggedIn(handleFollow))
+	cmds.register("following", middlewareLoggedIn(handleFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(handleUnfollow))
 
 	inputArgs := os.Args
 	if len(inputArgs) < 2 {
@@ -57,5 +59,19 @@ func main() {
 	err = cmds.run(progState, command{Name: cmdName, Args: cmdArgs})
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
+	return func(s *state, cmd command) error {
+		user, err := s.db.GetUser(context.Background(), s.cfg.CurrUser)
+		if err != nil {
+			return fmt.Errorf("error getting user from db: %v", err)
+		}
+		err = handler(s, cmd, user)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 }

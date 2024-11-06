@@ -9,16 +9,12 @@ import (
 	"github.com/jamesonhm/gator/internal/database"
 )
 
-func handleAddFeed(s *state, cmd command) error {
+func handleAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 2 {
 		return fmt.Errorf("usage: addfeed <feed-name> <url>")
 	}
 
 	ctx := context.Background()
-	user, err := s.db.GetUser(ctx, s.cfg.CurrUser)
-	if err != nil {
-		return fmt.Errorf("error getting user from db: %v", err)
-	}
 
 	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
 		ID:        uuid.New(),
@@ -60,16 +56,11 @@ func handleAgg(s *state, cmd command) error {
 	return nil
 }
 
-func handleFollow(s *state, cmd command) error {
+func handleFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 1 {
 		return fmt.Errorf("usage: %s <url>", cmd.Name)
 	}
 	url := cmd.Args[0]
-
-	u, err := s.db.GetUser(context.Background(), s.cfg.CurrUser)
-	if err != nil {
-		return fmt.Errorf("error getting user: %v", err)
-	}
 
 	f, err := s.db.GetFeedByUrl(context.Background(), url)
 	if err != nil {
@@ -80,7 +71,7 @@ func handleFollow(s *state, cmd command) error {
 		ID:        uuid.New(),
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		UserID:    u.ID,
+		UserID:    user.ID,
 		FeedID:    f.ID,
 	})
 	if err != nil {
@@ -90,13 +81,8 @@ func handleFollow(s *state, cmd command) error {
 	return nil
 }
 
-func handleFollowing(s *state, cmd command) error {
-	u, err := s.db.GetUser(context.Background(), s.cfg.CurrUser)
-	if err != nil {
-		return fmt.Errorf("error getting user: %v", err)
-	}
-
-	follows, err := s.db.GetFeedFollowsForUser(context.Background(), u.ID)
+func handleFollowing(s *state, cmd command, user database.User) error {
+	follows, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
 		return fmt.Errorf("error getting feed follows for user: %v", err)
 	}
@@ -180,6 +166,21 @@ func handleFeeds(s *state, cmd command) error {
 			return fmt.Errorf("error getting user: %s for feed: %s. Error: %v", f.UserID, f.Name, err)
 		}
 		fmt.Printf("%d - Feed: %s, URL: %s, User: %s\n", i+1, f.Name, f.Url, user.Name)
+	}
+	return nil
+}
+
+func handleUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("usage: %s <feed-url>", cmd.Name)
+	}
+
+	err := s.db.DeleteFeedFollow(context.Background(), database.DeleteFeedFollowParams{
+		UserID: user.ID,
+		Url:    cmd.Args[0],
+	})
+	if err != nil {
+		return fmt.Errorf("error deleting follow: %v", err)
 	}
 	return nil
 }
