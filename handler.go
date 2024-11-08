@@ -60,6 +60,7 @@ func handleAgg(s *state, cmd command) error {
 	fmt.Println("Collecting feeds every", duration.String())
 	fmt.Println("===========================================")
 	fmt.Println()
+
 	ticker := time.NewTicker(duration)
 	for ; ; <-ticker.C {
 		err = scrapeFeeds(s)
@@ -98,10 +99,54 @@ func scrapeFeeds(s *state) error {
 	fmt.Printf("Titles from feed: %s\n\n", feed.Channel.Title)
 	for _, item := range feed.Channel.Item {
 		fmt.Printf("  * %s\n", item.Title)
+		fmt.Printf("  * %s\n", item.PubDate)
+		fmt.Printf("  * %s\n", item.Description)
+
+		//post, err := s.db.CreatePost(context.Background(), database.CreatePostParams{
+		//	ID: uuid.New(),
+		//	CreatedAt: time.Now().UTC(),
+		//	UpdatedAt: time.Now().UTC(),
+		//	Title: item.Title,
+		//	Url: item.Link,
+		//	Description: parseDesc(item.Description),
+		//	PublishedAt: parsePubDate(item.PubDate),
+		//	FeedID: next.ID,
+		//})
 	}
 	fmt.Println()
-
 	return nil
+}
+
+func parseDesc(desc string) sql.NullString {
+	if len(desc) == 0 {
+		return sql.NullString{
+			Valid: false,
+		}
+	}
+	return sql.NullString{
+		String: desc,
+		Valid:  true,
+	}
+}
+
+func parsePubDate(datestr string) sql.NullTime {
+	layouts := []string{time.RFC1123Z}
+
+	for _, layout := range layouts {
+		t, err := time.Parse(layout, datestr)
+		if err != nil {
+			fmt.Println("unable to parse datestr:", datestr)
+			continue
+		} else {
+			return sql.NullTime{
+				Time:  t,
+				Valid: true,
+			}
+		}
+	}
+	return sql.NullTime{
+		Valid: false,
+	}
 }
 
 func handleFollow(s *state, cmd command, user database.User) error {
