@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jamesonhm/gator/internal/database"
+	"github.com/lib/pq"
 )
 
 func handleAddFeed(s *state, cmd command, user database.User) error {
@@ -57,9 +58,9 @@ func handleAgg(s *state, cmd command) error {
 		return fmt.Errorf("error parsing time duration '%s': %v", cmd.Args[0], err)
 	}
 
-	fmt.Println("Collecting feeds every", duration.String())
-	fmt.Println("===========================================")
-	fmt.Println()
+	//fmt.Println("Collecting feeds every", duration.String())
+	//fmt.Println("===========================================")
+	//fmt.Println()
 
 	ticker := time.NewTicker(duration)
 	for ; ; <-ticker.C {
@@ -96,24 +97,33 @@ func scrapeFeeds(s *state) error {
 		return fmt.Errorf("error fetching feed - %s: %v", next.Url, err)
 	}
 
-	fmt.Printf("Titles from feed: %s\n\n", feed.Channel.Title)
+	//fmt.Printf("Titles from feed: %s\n\n", feed.Channel.Title)
 	for _, item := range feed.Channel.Item {
-		fmt.Printf("  * %s\n", item.Title)
-		fmt.Printf("  * %s\n", item.PubDate)
-		fmt.Printf("  * %s\n", item.Description)
+		//fmt.Printf("  * %s\n", item.Title)
+		//fmt.Printf("  * %s\n", item.PubDate)
+		//fmt.Printf("  * %s\n", item.Description)
 
-		//post, err := s.db.CreatePost(context.Background(), database.CreatePostParams{
-		//	ID: uuid.New(),
-		//	CreatedAt: time.Now().UTC(),
-		//	UpdatedAt: time.Now().UTC(),
-		//	Title: item.Title,
-		//	Url: item.Link,
-		//	Description: parseDesc(item.Description),
-		//	PublishedAt: parsePubDate(item.PubDate),
-		//	FeedID: next.ID,
-		//})
+		_, err := s.db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
+			Title:       item.Title,
+			Url:         item.Link,
+			Description: parseDesc(item.Description),
+			PublishedAt: parsePubDate(item.PubDate),
+			FeedID:      next.ID,
+		})
+		if pgerr, ok := err.(*pq.Error); ok {
+			if pgerr.Code == "23505" {
+				// Error code for unique constraint, expected for repeat url's
+				continue
+			}
+		} else {
+			fmt.Println("Error creating post:", item.Title)
+			fmt.Printf("%v\n", err)
+		}
 	}
-	fmt.Println()
+
 	return nil
 }
 
@@ -130,7 +140,7 @@ func parseDesc(desc string) sql.NullString {
 }
 
 func parsePubDate(datestr string) sql.NullTime {
-	layouts := []string{time.RFC1123Z}
+	layouts := []string{time.ANSIC, time.UnixDate, time.RFC822, time.RFC822Z, time.RFC850, time.RFC1123Z}
 
 	for _, layout := range layouts {
 		t, err := time.Parse(layout, datestr)
